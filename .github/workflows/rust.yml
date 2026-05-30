@@ -1,4 +1,4 @@
-name: Linux Build
+name: Build
 
 on:
   workflow_dispatch:
@@ -15,41 +15,77 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install Rust and target
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: i686-unknown-linux-gnu
-        override: true
+      - name: Install Rust and target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: i686-unknown-linux-gnu
+          override: true
 
-    - name: Install Linux cross-compilation dependencies
-      run: |
-        sudo dpkg --add-architecture i386
-        sudo apt-get update
-        sudo apt-get install -y gcc-multilib g++-multilib
-        sudo apt-get install -y libstdc++-11-dev:i386
-        sudo apt-get install -y libc6-dev-i386
-        sudo apt-get install -y libprotobuf-dev:i386 protobuf-compiler
+      - name: Install Linux cross-compilation dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib
+          sudo apt-get install -y libstdc++-11-dev:i386
+          sudo apt-get install -y libc6-dev-i386
+          sudo apt-get install -y libprotobuf-dev:i386 protobuf-compiler
 
-    - name: Git Clone Dependencies
-      run: |
-        git clone https://github.com/alliedmodders/sourcemod --recursive -b 1.10-dev deps/sourcemod
-        git clone https://github.com/alliedmodders/metamod-source -b 1.10-dev deps/mmsource
-        git clone https://github.com/alliedmodders/hl2sdk -b csgo deps/hl2sdk-csgo
+      - name: Git Clone Dependencies
+        run: |
+          git clone https://github.com/alliedmodders/sourcemod --recursive -b 1.10-dev deps/sourcemod
+          git clone https://github.com/alliedmodders/metamod-source -b 1.10-dev deps/mmsource
+          git clone https://github.com/alliedmodders/hl2sdk -b csgo deps/hl2sdk-csgo
 
-    - name: Build
-      run: |
-        export SOURCEMOD="${{ github.workspace }}/deps/sourcemod"
-        export MMSOURCE="${{ github.workspace }}/deps/mmsource"
-        export HL2SDKCSGO="${{ github.workspace }}/deps/hl2sdk-csgo"
-        rustup target add i686-unknown-linux-gnu
-        cargo build --target i686-unknown-linux-gnu --release
+      - name: Build
+        run: |
+          export SOURCEMOD="${{ github.workspace }}/deps/sourcemod"
+          export MMSOURCE="${{ github.workspace }}/deps/mmsource"
+          export HL2SDKCSGO="${{ github.workspace }}/deps/hl2sdk-csgo"
+          rustup target add i686-unknown-linux-gnu
+          cargo build --target i686-unknown-linux-gnu --release
 
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux
-        path: target/i686-unknown-linux-gnu/release/
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: target/i686-unknown-linux-gnu/release/
+
+  build-windows:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust and target
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: i686-pc-windows-msvc
+          override: true
+
+      - name: Git Clone Dependencies
+        run: |
+          git clone https://github.com/alliedmodders/sourcemod --recursive -b 1.10-dev deps/sourcemod
+          git clone https://github.com/alliedmodders/metamod-source -b 1.10-dev deps/mmsource
+          git clone https://github.com/alliedmodders/hl2sdk -b csgo deps/hl2sdk-csgo
+
+      - name: Build
+        env:
+          SOURCEMOD: ${{ github.workspace }}/deps/sourcemod
+          MMSOURCE: ${{ github.workspace }}/deps/mmsource
+          HL2SDKCSGO: ${{ github.workspace }}/deps/hl2sdk-csgo
+          RUSTFLAGS: "-C target-feature=+crt-static"
+        run: |
+          rustup target add i686-pc-windows-msvc
+          cargo build --target i686-pc-windows-msvc --release
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: target/i686-pc-windows-msvc/release/
